@@ -1,3 +1,5 @@
+[![Build and publish Docker image](https://github.com/thematchless/bump-image-version-action/actions/workflows/build.yml/badge.svg)](https://github.com/thematchless/bump-image-version-action/actions/workflows/build.yml)
+
 # Bump docker image version on a remote host
 This repository contains an GitHub action to bump up a docker image version specified in your docker-compose stack.
 
