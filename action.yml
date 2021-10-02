@@ -33,7 +33,7 @@ inputs:
 
 runs:
   using: docker
-  image: ghcr.io/thematchless/bump-image-version-action:latest
+  image: Dockerfile
 
 branding:
   icon: send
