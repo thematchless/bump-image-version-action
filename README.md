@@ -26,7 +26,7 @@ This repository contains an GitHub action to bump up a docker image version spec
 ## Example GitHub action task
 ```yaml
 - name: Deploy on Remote Server
-  uses: thematchless/bump-image-version-action@latest
+  uses: thematchless/bump-image-version-action@v2
   with:
     remote_docker_host: thematchless@fancyServer.de
     ssh_private_key: ${{ secrets.REMOTE_SSH_PRIVATE_KEY }}
