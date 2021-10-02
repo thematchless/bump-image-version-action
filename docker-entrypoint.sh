@@ -43,6 +43,10 @@ if [ -z "$INPUT_ARGS" ]; then
   exit 1
 fi
 
+if [ -z "$INPUT_PULL_IMAGES_FIRST" ]; then
+  INPUT_PULL_IMAGES_FIRST=false
+fi
+
 if [ -z "$INPUT_STACK_FILE_NAME" ]; then
   INPUT_STACK_FILE_NAME=docker-compose.yml
 fi
