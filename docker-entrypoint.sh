@@ -65,7 +65,7 @@ echo "Add known hosts"
 printf '%s %s\n' "$SSH_HOST" "$INPUT_SSH_PUBLIC_KEY" > /etc/ssh/ssh_known_hosts
 
 if [ -n "$INPUT_PULL_IMAGES_FIRST" ] && [ "$INPUT_PULL_IMAGES_FIRST" = 'true' ]; then
-  execute_ssh "cd $INPUT_DEPLOY_PATH && docker-compose pull $INPUT_SERVICE_NAME"
+  execute_ssh "cd $INPUT_DEPLOY_PATH && docker compose pull $INPUT_SERVICE_NAME"
 fi
 
-execute_ssh "cd $INPUT_DEPLOY_PATH && docker-compose -f $INPUT_STACK_FILE_NAME $INPUT_ARGS $INPUT_SERVICE_NAME 2>&1"
+execute_ssh "cd $INPUT_DEPLOY_PATH && docker compose -f $INPUT_STACK_FILE_NAME $INPUT_ARGS $INPUT_SERVICE_NAME 2>&1"

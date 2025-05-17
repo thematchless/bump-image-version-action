@@ -5,8 +5,6 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    reviewers:
-      - thematchless
     assignees:
       - thematchless
     commit-message:
