@@ -12,7 +12,7 @@ execute_ssh() {
   ssh -q -t -i "$HOME/.ssh/id_rsa" \
     -o UserKnownHostsFile=/dev/null \
     -p "$INPUT_REMOTE_DOCKER_PORT" \
-    $SSH_STRICT_OPTION "$INPUT_REMOTE_DOCKER_HOST" "$@"
+    "$SSH_STRICT_OPTION" "$INPUT_REMOTE_DOCKER_HOST" "$@"
 }
 
 if [ -z "$INPUT_REMOTE_DOCKER_HOST" ]; then
@@ -87,10 +87,10 @@ fi
 # --- END FINGERPRINT CHECK ---
 
 if [ -n "$INPUT_PULL_IMAGES_FIRST" ] && [ "$INPUT_PULL_IMAGES_FIRST" = 'true' ]; then
-  execute_ssh "cd \"$INPUT_DEPLOY_PATH\" && docker-compose pull \"$INPUT_SERVICE_NAME\""
+  execute_ssh "cd \"$INPUT_DEPLOY_PATH\" && docker compose pull \"$INPUT_SERVICE_NAME\""
 fi
 
-execute_ssh "cd \"$INPUT_DEPLOY_PATH\" && docker-compose -f \"$INPUT_STACK_FILE_NAME\" $INPUT_ARGS \"$INPUT_SERVICE_NAME\" 2>&1"
+execute_ssh "cd \"$INPUT_DEPLOY_PATH\" && docker compose -f \"$INPUT_STACK_FILE_NAME\" $INPUT_ARGS \"$INPUT_SERVICE_NAME\" 2>&1"
 
 shred -u "$HOME/.ssh/id_rsa"
 ssh-agent -k
