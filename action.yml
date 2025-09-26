@@ -30,6 +30,9 @@ inputs:
   pull_images_first:
     description: Pull docker images before deploying.
     required: false
+  remote_host_fingerprint:
+    description: SSH host key fingerprint for verification (optional, recommended for security)
+    required: false
 
 runs:
   using: docker
