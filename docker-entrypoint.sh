@@ -13,6 +13,11 @@ execute_ssh() {
     -o UserKnownHostsFile=/dev/null \
     -p "$INPUT_REMOTE_DOCKER_PORT" \
     "$SSH_STRICT_OPTION" "$INPUT_REMOTE_DOCKER_HOST" "$@"
+  exit_code=$?
+  if [ $exit_code -ne 0 ]; then
+    echo "Error: SSH command failed with exit code $exit_code."
+    exit $exit_code
+  fi
 }
 
 if [ -z "$INPUT_REMOTE_DOCKER_HOST" ]; then
