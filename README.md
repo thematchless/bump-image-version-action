@@ -45,6 +45,14 @@ You can get the fingerprint of your remote host by running:
 ```sh
 ssh-keyscan -p <port> <host> | ssh-keygen -lf -
 ```
+
+**Best practice:** For maximum security, run the following command directly on your server to get the real host key fingerprint (to avoid man-in-the-middle attacks):
+
+```sh
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+(Or use the appropriate key file for your setup, e.g. `/etc/ssh/ssh_host_rsa_key.pub`)
+
 Copy the SHA256 fingerprint and save it as a GitHub secret (e.g. REMOTE_HOST_FINGERPRINT). This will be used to verify the identity of your remote server before any SSH command is executed.
 
 ## License
