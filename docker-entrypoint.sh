@@ -4,20 +4,20 @@ set -eu
 trap 'ssh-agent -k > /dev/null 2>&1' EXIT
 
 if [ -z "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
-  echo "Warning: No remote_host_fingerprint provided. SSH strict host key checking is disabled." >&2
+  echo "⚠️  Warning: No remote_host_fingerprint provided. SSH strict host key checking is disabled." >&2
   SSH_STRICT_OPTIONS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 else
-  echo "Info: remote_host_fingerprint provided. SSH strict host key checking is enabled."
+  echo "ℹ️  Info: remote_host_fingerprint provided. SSH strict host key checking is enabled."
   SSH_STRICT_OPTIONS="-o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
 fi
 
 execute_ssh() {
-  echo "Execute SSH command: $*"
+  echo "🖥️  Execute SSH command: $*"
   # shellcheck disable=SC2086
   ssh -i "$HOME/.ssh/id_rsa" $SSH_STRICT_OPTIONS -p "$INPUT_REMOTE_DOCKER_PORT" "$INPUT_REMOTE_DOCKER_HOST" "$@" 2>&1
   exit_code=$?
   if [ $exit_code -ne 0 ]; then
-    echo "Error: SSH command failed with exit code $exit_code." >&2
+    echo "❌ Error: SSH command failed with exit code $exit_code." >&2
     exit $exit_code
   fi
 }
@@ -75,7 +75,7 @@ ssh-add "$HOME/.ssh/id_rsa"
 
 # --- KNOWN HOSTS HANDLING ---
 if [ -n "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
-  echo "Adding server host key to known_hosts..."
+  echo "🔑 Adding server host key to known_hosts..."
   HOST_ONLY=$(echo "$INPUT_REMOTE_DOCKER_HOST" | awk -F'@' '{print $2}')
   ssh-keyscan -p "$INPUT_REMOTE_DOCKER_PORT" "$HOST_ONLY" > "$HOME/.ssh/known_hosts"
   chmod 644 "$HOME/.ssh/known_hosts"
@@ -84,9 +84,9 @@ fi
 
 # --- FINGERPRINT CHECK (before any SSH command) ---
 if [ -z "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
-  echo "Warning: No fingerprint provided. Skipping fingerprint check." >&2
+  echo "⚠️  Warning: No fingerprint provided. Skipping fingerprint check." >&2
 else
-  echo "Checking remote host fingerprint..."
+  echo "🖖 Checking remote host fingerprint..."
   HOST_ONLY=$(echo "$INPUT_REMOTE_DOCKER_HOST" | awk -F'@' '{print $2}')
   SERVER_FINGERPRINTS=$(ssh-keyscan -p "$INPUT_REMOTE_DOCKER_PORT" "$HOST_ONLY" 2>/dev/null | ssh-keygen -lf - | awk '{print $2}')
   found_match=false
@@ -102,7 +102,7 @@ else
     done
   done
   if [ "$found_match" = false ]; then
-    echo "Error: Fingerprint mismatch!"
+    echo "❌ Error: Fingerprint mismatch!"
     echo "Expected one of (with hex and length):"
     for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
       fp_trimmed=$(echo "$fp" | tr -d ' \t\n\r')
@@ -118,15 +118,15 @@ else
     done
     exit 1
   fi
-  echo "Fingerprint matches one of the allowed fingerprints."
+  echo "✅ Fingerprint matches one of the allowed fingerprints."
 fi
 # --- END FINGERPRINT CHECK ---
 
 if [ -n "$INPUT_PULL_IMAGES_FIRST" ] && [ "$INPUT_PULL_IMAGES_FIRST" = 'true' ]; then
-  execute_ssh "cd \"$INPUT_DEPLOY_PATH\" && docker compose pull \"$INPUT_SERVICE_NAME\" && echo 'Pull finished.'"
+  execute_ssh "cd \"$INPUT_DEPLOY_PATH\" && docker compose pull \"$INPUT_SERVICE_NAME\" && echo 'Pull finished. ✅'"
 fi
 
-execute_ssh "cd \"$INPUT_DEPLOY_PATH\" && docker compose -f \"$INPUT_STACK_FILE_NAME\" $INPUT_ARGS \"$INPUT_SERVICE_NAME\" 2>&1 && echo 'Deploy finished.'"
+execute_ssh "cd \"$INPUT_DEPLOY_PATH\" && docker compose -f \"$INPUT_STACK_FILE_NAME\" $INPUT_ARGS \"$INPUT_SERVICE_NAME\" 2>&1 && echo 'Deploy finished. ✅'"
 
 shred -u "$HOME/.ssh/id_rsa"
-echo "Deployment successful."
+echo "🚀 Deployment successful."
