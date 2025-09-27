@@ -95,6 +95,7 @@ else
   # Replace commas and newlines with spaces, then iterate
   for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
     fp_trimmed=$(echo "$fp" | tr -d ' \t\n\r')
+    [ -z "$fp_trimmed" ] && continue
     if [ "$ACTUAL_FINGERPRINT" = "$fp_trimmed" ]; then
       found_match=true
       break
@@ -103,7 +104,9 @@ else
   if [ "$found_match" = false ]; then
     echo "Error: Fingerprint mismatch! Expected one of:"
     for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
-      echo "  '$(echo "$fp" | tr -d ' \t\n\r')'"
+      fp_trimmed=$(echo "$fp" | tr -d ' \t\n\r')
+      [ -z "$fp_trimmed" ] && continue
+      echo "  '$fp_trimmed'"
     done
     echo "Found: '$ACTUAL_FINGERPRINT'" >&2
     exit 1
