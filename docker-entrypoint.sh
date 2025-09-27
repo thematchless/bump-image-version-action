@@ -102,13 +102,15 @@ else
     fi
   done
   if [ "$found_match" = false ]; then
-    echo "Error: Fingerprint mismatch! Expected one of:"
+    echo "Error: Fingerprint mismatch! Expected one of (with hex and length):"
     for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
       fp_trimmed=$(echo "$fp" | tr -d ' \t\n\r')
       [ -z "$fp_trimmed" ] && continue
-      echo "  '$fp_trimmed'"
+      fp_len=$(printf '%s' "$fp_trimmed" | wc -c | awk '{print $1-1}')
+      echo "  '$fp_trimmed' (len: $fp_len) hex: $(printf '%s' "$fp_trimmed" | od -An -tx1)"
     done
-    echo "Found: '$ACTUAL_FINGERPRINT'" >&2
+    af_len=$(printf '%s' "$ACTUAL_FINGERPRINT" | wc -c | awk '{print $1-1}')
+    echo "Found: '$ACTUAL_FINGERPRINT' (len: $af_len) hex: $(printf '%s' "$ACTUAL_FINGERPRINT" | od -An -tx1)" >&2
     exit 1
   fi
   echo "Fingerprint matches: $ACTUAL_FINGERPRINT"
