@@ -88,32 +88,37 @@ if [ -z "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
 else
   echo "Checking remote host fingerprint..."
   HOST_ONLY=$(echo "$INPUT_REMOTE_DOCKER_HOST" | awk -F'@' '{print $2}')
-  ACTUAL_FINGERPRINT=$(ssh-keyscan -p "$INPUT_REMOTE_DOCKER_PORT" "$HOST_ONLY" 2>/dev/null | ssh-keygen -lf - | awk '{print $2}')
-  # Trim actual fingerprint
-  ACTUAL_FINGERPRINT=$(echo "$ACTUAL_FINGERPRINT" | tr -d ' \t\n\r')
+  SERVER_FINGERPRINTS=$(ssh-keyscan -p "$INPUT_REMOTE_DOCKER_PORT" "$HOST_ONLY" 2>/dev/null | ssh-keygen -lf - | awk '{print $2}')
   found_match=false
-  # Replace commas and newlines with spaces, then iterate
-  for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
-    fp_trimmed=$(echo "$fp" | tr -d ' \t\n\r')
-    [ -z "$fp_trimmed" ] && continue
-    if [ "$ACTUAL_FINGERPRINT" = "$fp_trimmed" ]; then
-      found_match=true
-      break
-    fi
+  for actual in $SERVER_FINGERPRINTS; do
+    actual_trimmed=$(echo "$actual" | tr -d ' \t\n\r')
+    for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
+      fp_trimmed=$(echo "$fp" | tr -d ' \t\n\r')
+      [ -z "$fp_trimmed" ] && continue
+      if [ "$actual_trimmed" = "$fp_trimmed" ]; then
+        found_match=true
+        break 2
+      fi
+    done
   done
   if [ "$found_match" = false ]; then
-    echo "Error: Fingerprint mismatch! Expected one of (with hex and length):"
+    echo "Error: Fingerprint mismatch!"
+    echo "Expected one of (with hex and length):"
     for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
       fp_trimmed=$(echo "$fp" | tr -d ' \t\n\r')
       [ -z "$fp_trimmed" ] && continue
       fp_len=$(printf '%s' "$fp_trimmed" | wc -c | awk '{print $1-1}')
       echo "  '$fp_trimmed' (len: $fp_len) hex: $(printf '%s' "$fp_trimmed" | od -An -tx1)"
     done
-    af_len=$(printf '%s' "$ACTUAL_FINGERPRINT" | wc -c | awk '{print $1-1}')
-    echo "Found: '$ACTUAL_FINGERPRINT' (len: $af_len) hex: $(printf '%s' "$ACTUAL_FINGERPRINT" | od -An -tx1)" >&2
+    echo "Server fingerprints (with hex and length):"
+    for actual in $SERVER_FINGERPRINTS; do
+      actual_trimmed=$(echo "$actual" | tr -d ' \t\n\r')
+      af_len=$(printf '%s' "$actual_trimmed" | wc -c | awk '{print $1-1}')
+      echo "  '$actual_trimmed' (len: $af_len) hex: $(printf '%s' "$actual_trimmed" | od -An -tx1)"
+    done
     exit 1
   fi
-  echo "Fingerprint matches: $ACTUAL_FINGERPRINT"
+  echo "Fingerprint matches one of the allowed fingerprints."
 fi
 # --- END FINGERPRINT CHECK ---
 
