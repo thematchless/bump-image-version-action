@@ -2,8 +2,10 @@
 set -eu
 
 if [ -z "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
+  echo "Warning: No remote_host_fingerprint provided. SSH strict host key checking is disabled."
   SSH_STRICT_OPTION="-o StrictHostKeyChecking=no"
 else
+  echo "Info: remote_host_fingerprint provided. SSH strict host key checking is enabled."
   SSH_STRICT_OPTION="-o StrictHostKeyChecking=yes"
 fi
 
@@ -12,7 +14,12 @@ execute_ssh() {
   ssh -q -t -i "$HOME/.ssh/id_rsa" \
     -o UserKnownHostsFile=/dev/null \
     -p "$INPUT_REMOTE_DOCKER_PORT" \
-    "$SSH_STRICT_OPTION" "$INPUT_REMOTE_DOCKER_HOST" "$@"
+    "$SSH_STRICT_OPTION" "$INPUT_REMOTE_DOCKER_HOST" "$@" 2>&1
+  exit_code=$?
+  if [ $exit_code -ne 0 ]; then
+    echo "Error: SSH command failed with exit code $exit_code."
+    exit $exit_code
+  fi
 }
 
 if [ -z "$INPUT_REMOTE_DOCKER_HOST" ]; then
