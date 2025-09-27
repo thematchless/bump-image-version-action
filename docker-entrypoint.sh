@@ -3,18 +3,18 @@ set -eu
 
 if [ -z "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
   echo "Warning: No remote_host_fingerprint provided. SSH strict host key checking is disabled."
-  SSH_STRICT_OPTION="-o StrictHostKeyChecking=no"
+  SSH_STRICT_OPTION="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 else
   echo "Info: remote_host_fingerprint provided. SSH strict host key checking is enabled."
-  SSH_STRICT_OPTION="-o StrictHostKeyChecking=yes"
+  SSH_STRICT_OPTION="-o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
 fi
 
 execute_ssh() {
   echo "Execute SSH command: $*"
   ssh -t -i "$HOME/.ssh/id_rsa" \
-    -o UserKnownHostsFile=/dev/null \
+    "$SSH_STRICT_OPTION" \
     -p "$INPUT_REMOTE_DOCKER_PORT" \
-    "$SSH_STRICT_OPTION" "$INPUT_REMOTE_DOCKER_HOST" "$@" 2>&1
+    "$INPUT_REMOTE_DOCKER_HOST" "$@" 2>&1
   exit_code=$?
   if [ $exit_code -ne 0 ]; then
     echo "Error: SSH command failed with exit code $exit_code."
@@ -64,19 +64,21 @@ if [ -z "$INPUT_STACK_FILE_NAME" ]; then
   INPUT_STACK_FILE_NAME=docker-compose.yml
 fi
 
-SSH_HOST=${INPUT_REMOTE_DOCKER_HOST#*@}
-
-echo "Registering SSH keys..."
-
-# register the private key with the agent.
+# Register the private key with the agent.
 mkdir -p "$HOME/.ssh"
 printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_rsa"
 chmod 600 "$HOME/.ssh/id_rsa"
 eval "$(ssh-agent)"
 ssh-add "$HOME/.ssh/id_rsa"
-echo "Adding known hosts..."
-printf '%s %s\n' "$SSH_HOST" "$INPUT_SSH_PUBLIC_KEY" > /etc/ssh/ssh_known_hosts
-chmod 644 /etc/ssh/ssh_known_hosts
+
+# --- KNOWN HOSTS HANDLING ---
+if [ -n "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
+  echo "Adding server host key to known_hosts..."
+  HOST_ONLY=$(echo "$INPUT_REMOTE_DOCKER_HOST" | awk -F'@' '{print $2}')
+  ssh-keyscan -p "$INPUT_REMOTE_DOCKER_PORT" "$HOST_ONLY" > "$HOME/.ssh/known_hosts"
+  chmod 644 "$HOME/.ssh/known_hosts"
+fi
+# --- END KNOWN HOSTS HANDLING ---
 
 # --- FINGERPRINT CHECK (before any SSH command) ---
 if [ -z "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
