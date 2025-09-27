@@ -89,17 +89,23 @@ else
   echo "Checking remote host fingerprint..."
   HOST_ONLY=$(echo "$INPUT_REMOTE_DOCKER_HOST" | awk -F'@' '{print $2}')
   ACTUAL_FINGERPRINT=$(ssh-keyscan -p "$INPUT_REMOTE_DOCKER_PORT" "$HOST_ONLY" 2>/dev/null | ssh-keygen -lf - | awk '{print $2}')
-  # Supports multiple fingerprints (comma, whitespace, or newline separated)
+  # Trim actual fingerprint
+  ACTUAL_FINGERPRINT=$(echo "$ACTUAL_FINGERPRINT" | tr -d ' \t\n\r')
   found_match=false
   # Replace commas and newlines with spaces, then iterate
   for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
-    if [ "$ACTUAL_FINGERPRINT" = "$fp" ]; then
+    fp_trimmed=$(echo "$fp" | tr -d ' \t\n\r')
+    if [ "$ACTUAL_FINGERPRINT" = "$fp_trimmed" ]; then
       found_match=true
       break
     fi
   done
   if [ "$found_match" = false ]; then
-    echo "Error: Fingerprint mismatch! Expected one of: $INPUT_REMOTE_HOST_FINGERPRINT, Found: $ACTUAL_FINGERPRINT" >&2
+    echo "Error: Fingerprint mismatch! Expected one of:"
+    for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
+      echo "  '$(echo "$fp" | tr -d ' \t\n\r')'"
+    done
+    echo "Found: '$ACTUAL_FINGERPRINT'" >&2
     exit 1
   fi
   echo "Fingerprint matches: $ACTUAL_FINGERPRINT"
