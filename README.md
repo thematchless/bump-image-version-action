@@ -21,7 +21,7 @@ This repository contains an GitHub action to bump up a docker image version spec
 |        :x:         | stack_file_name         | docker-compose.yaml                                                                                                                                                              | docker-compose.yml | name of the compose file                                                                       |
 |        :x:         | remote_docker_port      | 1337                                                                                                                                                                             | 22                 | ssh port on the host                                                                           |
 |        :x:         | pull_images_first       | true                                                                                                                                                                             | false              | flag to force the image pull before starting                                                   |
-|        :x:         | remote_host_fingerprint | SHA256:abc123def456...                                                                                                                                                           |                    | (optional) SSH host key fingerprint for verification. Get it via `ssh-keyscan -p <port> <host> | ssh-keygen -lf -` and save as secret. |
+|        :x:         | remote_host_fingerprint | SHA256:abc123def456...,SHA256:def456ghi789...<br>SHA256:abc123def456... SHA256:def456ghi789...<br>SHA256:abc123def456...\nSHA256:def456ghi789... |                    | (optional) One or more SSH host key fingerprints for verification. Separate multiple fingerprints by comma, whitespace, or newline. |
 
 
 ## Example GitHub action task
@@ -53,7 +53,21 @@ ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
 ```
 (Or use the appropriate key file for your setup, e.g. `/etc/ssh/ssh_host_rsa_key.pub`)
 
-Copy the SHA256 fingerprint and save it as a GitHub secret (e.g. REMOTE_HOST_FINGERPRINT). This will be used to verify the identity of your remote server before any SSH command is executed.
+**Multiple fingerprints:**
+If your server uses multiple host keys (e.g. ED25519 and RSA), or you want to allow several fingerprints, you can provide multiple fingerprints in the secret. Separate them by comma, whitespace, or newline. Example:
+
+```
+SHA256:abc123def456...,SHA256:def456ghi789...
+```
+```
+SHA256:abc123def456... SHA256:def456ghi789...
+```
+```
+SHA256:abc123def456...
+SHA256:def456ghi789...
+```
+
+Copy the SHA256 fingerprint(s) and save as a GitHub secret (e.g. REMOTE_HOST_FINGERPRINT). This will be used to verify the identity of your remote server before any SSH command is executed.
 
 ## License
 This project is licensed under the MIT license. See the [LICENSE](LICENSE) file for details.

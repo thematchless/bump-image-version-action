@@ -1,8 +1,10 @@
 #!/bin/sh
 set -eu
 
+trap 'ssh-agent -k > /dev/null 2>&1' EXIT
+
 if [ -z "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
-  echo "Warning: No remote_host_fingerprint provided. SSH strict host key checking is disabled."
+  echo "Warning: No remote_host_fingerprint provided. SSH strict host key checking is disabled." >&2
   SSH_STRICT_OPTIONS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 else
   echo "Info: remote_host_fingerprint provided. SSH strict host key checking is enabled."
@@ -12,16 +14,17 @@ fi
 execute_ssh() {
   echo "Execute SSH command: $*"
   # shellcheck disable=SC2086
-  ssh -t -i "$HOME/.ssh/id_rsa" $SSH_STRICT_OPTIONS -p "$INPUT_REMOTE_DOCKER_PORT" "$INPUT_REMOTE_DOCKER_HOST" "$@" 2>&1
+  ssh -i "$HOME/.ssh/id_rsa" $SSH_STRICT_OPTIONS -p "$INPUT_REMOTE_DOCKER_PORT" "$INPUT_REMOTE_DOCKER_HOST" "$@" 2>&1
   exit_code=$?
   if [ $exit_code -ne 0 ]; then
-    echo "Error: SSH command failed with exit code $exit_code."
+    echo "Error: SSH command failed with exit code $exit_code." >&2
     exit $exit_code
   fi
 }
 
+# Input validation
 if [ -z "$INPUT_REMOTE_DOCKER_HOST" ]; then
-  echo "Error: remote_docker_host input is required!"
+  echo "Error: remote_docker_host input is required!" >&2
   exit 1
 fi
 
@@ -30,27 +33,27 @@ if [ -z "$INPUT_REMOTE_DOCKER_PORT" ]; then
 fi
 
 if [ -z "$INPUT_SSH_PUBLIC_KEY" ]; then
-  echo "Error: ssh_public_key input is required!"
+  echo "Error: ssh_public_key input is required!" >&2
   exit 1
 fi
 
 if [ -z "$INPUT_SSH_PRIVATE_KEY" ]; then
-  echo "Error: ssh_private_key input is required!"
+  echo "Error: ssh_private_key input is required!" >&2
   exit 1
 fi
 
 if [ -z "$INPUT_SERVICE_NAME" ]; then
-  echo "Error: service_name input is required!"
+  echo "Error: service_name input is required!" >&2
   exit 1
 fi
 
 if [ -z "$INPUT_DEPLOY_PATH" ]; then
-  echo "Error: deploy_path input is required!"
+  echo "Error: deploy_path input is required!" >&2
   exit 1
 fi
 
 if [ -z "$INPUT_ARGS" ]; then
-  echo "Error: args input is required!"
+  echo "Error: args input is required!" >&2
   exit 1
 fi
 
@@ -62,8 +65,9 @@ if [ -z "$INPUT_STACK_FILE_NAME" ]; then
   INPUT_STACK_FILE_NAME=docker-compose.yml
 fi
 
-# Register the private key with the agent.
+# Register the private key with the agent
 mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
 printf '%s\n' "$INPUT_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_rsa"
 chmod 600 "$HOME/.ssh/id_rsa"
 eval "$(ssh-agent)"
@@ -80,13 +84,22 @@ fi
 
 # --- FINGERPRINT CHECK (before any SSH command) ---
 if [ -z "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
-  echo "Warning: No fingerprint provided. Skipping fingerprint check."
+  echo "Warning: No fingerprint provided. Skipping fingerprint check." >&2
 else
   echo "Checking remote host fingerprint..."
   HOST_ONLY=$(echo "$INPUT_REMOTE_DOCKER_HOST" | awk -F'@' '{print $2}')
   ACTUAL_FINGERPRINT=$(ssh-keyscan -p "$INPUT_REMOTE_DOCKER_PORT" "$HOST_ONLY" 2>/dev/null | ssh-keygen -lf - | awk '{print $2}')
-  if [ "$ACTUAL_FINGERPRINT" != "$INPUT_REMOTE_HOST_FINGERPRINT" ]; then
-    echo "Error: Fingerprint mismatch! Expected: $INPUT_REMOTE_HOST_FINGERPRINT, Found: $ACTUAL_FINGERPRINT"
+  # Supports multiple fingerprints (comma, whitespace, or newline separated)
+  found_match=false
+  # Replace commas and newlines with spaces, then iterate
+  for fp in $(echo "$INPUT_REMOTE_HOST_FINGERPRINT" | tr ',\n' '  '); do
+    if [ "$ACTUAL_FINGERPRINT" = "$fp" ]; then
+      found_match=true
+      break
+    fi
+  done
+  if [ "$found_match" = false ]; then
+    echo "Error: Fingerprint mismatch! Expected one of: $INPUT_REMOTE_HOST_FINGERPRINT, Found: $ACTUAL_FINGERPRINT" >&2
     exit 1
   fi
   echo "Fingerprint matches: $ACTUAL_FINGERPRINT"
@@ -100,4 +113,4 @@ fi
 execute_ssh "cd \"$INPUT_DEPLOY_PATH\" && docker compose -f \"$INPUT_STACK_FILE_NAME\" $INPUT_ARGS \"$INPUT_SERVICE_NAME\" 2>&1 && echo 'Deploy finished.'"
 
 shred -u "$HOME/.ssh/id_rsa"
-ssh-agent -k
+echo "Deployment successful."
